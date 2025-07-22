@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Listen and Build the Sentence</title>
+    <style>
+        :root {
+            --primary-color: #1e90ff;
+            --primary-dark: #1873cc;
+            --success-color: #28a745;
+            --error-color: #ff4444;
+            --light-bg: #f0f8ff;
+            --text-color: #333;
+            --disabled-color: #ccc;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text-color);
+            overscroll-behavior: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .container {
+            text-align: center;
+            padding: 20px;
+            max-width: 900px;
+            width: 95%;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+        }
+
+        .game-title {
+            font-size: clamp(2em, 6vw, 2.8em);
+            color: var(--primary-color);
+            margin: 0 0 20px;
+            font-weight: bold;
+        }
+
+        .meaning {
+            font-size: clamp(1.1em, 4.5vw, 1.6em);
+            color: var(--primary-dark);
+            margin: 10px 0;
+            font-style: italic;
+        }
+
+        .sentence {
+            font-size: clamp(1.2em, 4vw, 1.6em);
+            margin: 20px 0;
+            min-height: 50px;
+            background: var(--light-bg);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            letter-spacing: 2px;
+            font-weight: 500;
+        }
+
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .word {
+            background: #fff;
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 12px 22px;
+            cursor: pointer;
+            font-size: clamp(1em, 3.5vw, 1.3em);
+            transition: all 0.2s ease-in-out;
+            user-select: none;
+            touch-action: manipulation;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .word:hover, .word:focus {
+            background: var(--primary-color);
+            color: #fff;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(30, 144, 255, 0.3);
+            outline: none;
+        }
+
+        .word.disabled {
+            background: #e0e0e0;
+            border-color: var(--disabled-color);
+            cursor: not-allowed;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+        
+        .word.correct {
+            background: var(--success-color);
+            border-color: var(--success-color);
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        .word.incorrect {
+            background: var(--error-color);
+            border-color: var(--error-color);
+            color: #fff;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        button {
+            background: var(--primary-color);
+            color: #fff;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: clamp(0.9em, 3.5vw, 1.1em);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+        }
+
+        button:hover, button:focus {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            outline: none;
+        }
+
+        button:disabled {
+            background: var(--disabled-color);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .score {
+            font-size: clamp(1em, 4vw, 1.3em);
+            margin-top: 15px;
+            font-weight: 500;
+        }
+
+        .message {
+            font-size: clamp(1.1em, 4vw, 1.4em);
+            color: var(--error-color);
+            margin: 15px 0;
+            font-weight: 500;
+            min-height: 25px;
+        }
+        
+        .blink {
+            animation: blink 0.4s 3;
+        }
+
+        @keyframes blink {
+            50% { background: #fff; color: var(--text-color); }
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        .start-screen, .congrats-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #startBtn, #playAgainBtn {
+            padding: 15px 40px;
+            font-size: 1.2em;
+            background: var(--success-color);
+        }
+        #startBtn:hover, #playAgainBtn:hover {
+            background: darkgreen;
+        }
+        
+        @media (max-width: 600px) {
+            .container { padding: 15px; }
+            .word-bank { gap: 10px; }
+            .word { padding: 10px 18px; }
+            button { padding: 10px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="fireworks"></canvas>
+    <div class="container">
+        <div class="game-title">NGHE VÀ XẾP TỪ THÀNH CÂU</div>
+        
+        <div class="start-screen" id="startScreen">
+            <button id="startBtn">Bắt đầu</button>
+        </div>
+
+        <div class="game-screen" id="gameScreen" style="display: none;">
+            <div class="meaning" id="meaning"></div>
+            <div class="sentence" id="sentence"></div>
+            <div class="message" id="message"></div>
+            <div class="word-bank" id="wordBank"></div>
+            <div class="buttons">
+                <button id="listenAgainBtn">Nghe lại từ cần điền</button>
+                <button id="resetBtn">Chơi lại từ đầu</button>
+            </div>
+            <div class="score" id="score">Score: 0 | Sentences Completed: 0/52</div>
+        </div>
+
+        <div class="congrats-screen" id="congratsScreen" style="display: none;">
+            <div class="message" style="color: var(--success-color); font-size: 1.5em;">Chúc mừng! Bạn đã hoàn thành tất cả các câu!</div>
+            <button id="playAgainBtn">Chơi lại</button>
+        </div>
+    </div>
+
+    <script>
+    const sentences = [
+        { en: "I go to the cinema to watch movies.", vi: "Tôi đi đến rạp chiếu phim để xem phim 📽️" },
+        { en: "We play games at the shopping centre.", vi: "Chúng tôi chơi trò chơi ở trung tâm mua sắm 🏬" },
+        { en: "My brother trains at the sports centre every afternoon.", vi: "Anh trai tôi tập luyện tại trung tâm thể thao mỗi buổi chiều 🏋️" },
+        { en: "I swim at the swimming pool on Sundays.", vi: "Tôi bơi ở hồ bơi vào Chủ nhật 🏊" },
+        { en: "They walk their dog in the park.", vi: "Họ dắt chó đi dạo ở công viên 🐶" },
+        { en: "We see lions and tigers at the zoo.", vi: "Chúng tôi xem sư tử và hổ ở sở thú 🦁🐅" },
+        { en: "I read books in the library after school.", vi: "Tôi đọc sách ở thư viện sau giờ học 📚" },
+        { en: "Mum buys food at the supermarket.", vi: "Mẹ mua thức ăn ở siêu thị 🛒" },
+        { en: "I help my mum cook meals every evening.", vi: "Tôi giúp mẹ nấu ăn mỗi tối 🍳" },
+        { en: "My sister does yoga in the morning.", vi: "Chị tôi tập yoga vào buổi sáng 🧘" },
+        { en: "They play tennis at the weekend.", vi: "Họ chơi quần vợt vào cuối tuần 🎾" },
+        { en: "I watch films with my family.", vi: "Tôi xem phim cùng gia đình 🎬" },
+        { en: "We go shopping on Saturdays.", vi: "Chúng tôi đi mua sắm vào thứ Bảy 🛍️" },
+        { en: "I visit my grandparents every Sunday.", vi: "Tôi thăm ông bà mỗi Chủ nhật 👴👵" },
+        { en: "He likes to play games on the computer.", vi: "Anh ấy thích chơi trò chơi trên máy tính 💻" },
+        { en: "She can ride a bike very well.", vi: "Cô ấy có thể đi xe đạp rất giỏi 🚴" },
+        { en: "I listen to music when I do my homework.", vi: "Tôi nghe nhạc khi làm bài tập về nhà 🎶" },
+        { en: "I love the weekend because I can relax.", vi: "Tôi yêu cuối tuần vì tôi có thể thư giãn 😌" },
+        { en: "We go to the beach on Saturday.", vi: "Chúng tôi đi biển vào thứ Bảy 🏖️" },
+        { en: "I stay at home on Sunday.", vi: "Tôi ở nhà vào Chủ nhật 🏡" },
+        { en: "We visited a museum last weekend.", vi: "Chúng tôi đã thăm bảo tàng cuối tuần trước 🖼️" },
+        { en: "I like playing on the beach.", vi: "Tôi thích chơi trên bãi biển 🏝️" },
+        { en: "They climbed a mountain last summer.", vi: "Họ đã leo núi mùa hè trước ⛰️" },
+        { en: "We had fun in the countryside.", vi: "Chúng tôi đã vui chơi ở vùng quê 🌳" },
+        { en: "We stayed on a beautiful island.", vi: "Chúng tôi ở trên một hòn đảo đẹp 🏝️" },
+        { en: "We slept at a hotel by the sea.", vi: "Chúng tôi ngủ ở khách sạn cạnh biển 🏨🌊" },
+        { en: "I love going to the amusement park.", vi: "Tôi yêu thích đi công viên giải trí 🎢" },
+        { en: "I bought a book at the bookshop.", vi: "Tôi đã mua một cuốn sách ở hiệu sách 📖" },
+        { en: "She got some bread at the bakery.", vi: "Cô ấy mua bánh mì ở tiệm bánh 🥖" },
+        { en: "We ate lunch at a nice restaurant.", vi: "Chúng tôi ăn trưa ở một nhà hàng đẹp 🍽️" },
+        { en: "I want to travel around the world.", vi: "Tôi muốn đi du lịch vòng quanh thế giới 🌍" },
+        { en: "They swim in the lake every summer.", vi: "Họ bơi ở hồ mỗi mùa hè 🏊" },
+        { en: "We sunbathe on the beach.", vi: "Chúng tôi tắm nắng trên bãi biển ☀️" },
+        { en: "I take photos of flowers and animals.", vi: "Tôi chụp ảnh hoa và động vật 📸" },
+        { en: "They build sandcastles at the seaside.", vi: "Họ xây lâu đài cát ở bờ biển 🏰" },
+        { en: "We go camping in the forest.", vi: "Chúng tôi đi cắm trại trong rừng ⛺" },
+        { en: "Let's have a picnic in the park!", vi: "Hãy đi dã ngoại ở công viên! 🧺" },
+        { en: "I relax in my room after school.", vi: "Tôi thư giãn trong phòng sau giờ học 🛋️" },
+        { en: "I went to Hanoi by plane.", vi: "Tôi đến Hà Nội bằng máy bay ✈️" },
+        { en: "They travelled to Hue by train.", vi: "Họ đi Huế bằng tàu hỏa 🚂" },
+        { en: "My dad drives a car to work.", vi: "Bố tôi lái xe ô tô đi làm 🚗" },
+        { en: "I take the bus to school.", vi: "Tôi đi xe buýt đến trường 🚌" },
+        { en: "We went across the river by boat.", vi: "Chúng tôi qua sông bằng thuyền ⛵" },
+        { en: "My uncle rides a motorbike.", vi: "Chú tôi đi xe máy 🏍️" },
+        { en: "I have two cats at home.", vi: "Tôi có hai con mèo ở nhà 🐱" },
+        { en: "She dances at the community centre.", vi: "Cô ấy nhảy múa ở trung tâm cộng đồng 💃" },
+        { en: "We watch the sunset at the beach.", vi: "Chúng tôi xem hoàng hôn ở bãi biển 🌅" },
+        { en: "I draw pictures in my free time.", vi: "Tôi vẽ tranh trong thời gian rảnh 🎨" },
+        { en: "We had dinner at a restaurant near the park.", vi: "Chúng tôi đã ăn tối tại một nhà hàng gần công viên 🍽️" },
+        { en: "My sister went to the bookshop to buy a new storybook.", vi: "Chị tôi đã đến hiệu sách để mua một cuốn truyện mới 📖" },
+        { en: "What's the weather like today?", vi: "Thời tiết hôm nay thế nào? 🌦️" },
+        { en: "It's sunny and warm.", vi: "Trời nắng và ấm. ☀️" }
+    ];
+
+    const elements = {
+        startScreen: document.getElementById('startScreen'),
+        gameScreen: document.getElementById('gameScreen'),
+        congratsScreen: document.getElementById('congratsScreen'),
+        meaning: document.getElementById('meaning'),
+        sentence: document.getElementById('sentence'),
+        message: document.getElementById('message'),
+        wordBank: document.getElementById('wordBank'),
+        listenAgainBtn: document.getElementById('listenAgainBtn'),
+        resetBtn: document.getElementById('resetBtn'),
+        startBtn: document.getElementById('startBtn'),
+        playAgainBtn: document.getElementById('playAgainBtn'),
+        score: document.getElementById('score'),
+        canvas: document.getElementById('fireworks')
+    };
+    
+    let state = {};
+    const isSpeechSupported = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+
+    function initializeState() {
+        state = {
+            originalSentence: '', words: [], currentWordIndex: 0,
+            score: 0, completedSentences: 0, usedSentenceIndices: [],
+            isSpeaking: false, animationFrameId: null
+        };
+    }
+    
+    function initializeSpeech() {
+        if (isSpeechSupported && speechSynthesis.getVoices().length === 0) {
+            speechSynthesis.onvoiceschanged = () => console.log("Voices loaded.");
+        }
+    }
+
+    function speak(text, callback) {
+        if (!isSpeechSupported) { if(callback) callback(); return; }
+        if (speechSynthesis.speaking) { speechSynthesis.cancel(); }
+
+        state.isSpeaking = true;
+        elements.listenAgainBtn.disabled = true;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.9;
+        
+        utterance.onend = () => {
+            state.isSpeaking = false;
+            elements.listenAgainBtn.disabled = state.currentWordIndex >= state.words.length;
+            if (callback) callback();
+        };
+        utterance.onerror = (event) => {
+            console.error('SpeechSynthesis Error:', event.error);
+            state.isSpeaking = false;
+            elements.listenAgainBtn.disabled = state.currentWordIndex >= state.words.length;
+            if (callback) callback();
+        };
+        
+        setTimeout(() => speechSynthesis.speak(utterance), 50);
+    }
+    
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function updateScoreDisplay() {
+        elements.score.textContent = `Điểm: ${state.score} | Hoàn thành: ${state.completedSentences}/${sentences.length}`;
+    }
+
+    function startNewSentence() {
+        if (state.completedSentences >= sentences.length) {
+            showCongratulations(); return;
+        }
+        let sentenceIndex;
+        do {
+            sentenceIndex = Math.floor(Math.random() * sentences.length);
+        } while (state.usedSentenceIndices.includes(sentenceIndex));
+        state.usedSentenceIndices.push(sentenceIndex);
+        const currentData = sentences[sentenceIndex];
+        
+        state.originalSentence = currentData.en;
+        const cleanSentence = state.originalSentence.replace(/[.!?]$/, '');
+        state.words = cleanSentence.split(' ');
+        state.currentWordIndex = 0;
+
+        elements.meaning.innerHTML = currentData.vi;
+        elements.message.textContent = '';
+        elements.sentence.textContent = '_ '.repeat(state.words.length).trim();
+        
+        const shuffledWords = shuffle([...state.words]);
+        elements.wordBank.innerHTML = '';
+        shuffledWords.forEach(word => {
+            const wordEl = document.createElement('div');
+            wordEl.className = 'word';
+            wordEl.textContent = word;
+            wordEl.addEventListener('click', () => handleWordClick(word, wordEl));
+            elements.wordBank.appendChild(wordEl);
+        });
+
+        elements.listenAgainBtn.disabled = false;
+        speak(state.words[0]);
+    }
+
+    function handleWordClick(clickedWord, wordEl) {
+        if (wordEl.classList.contains('disabled')) return;
+        const correctWord = state.words[state.currentWordIndex];
+
+        if (clickedWord === correctWord) {
+            // *** CẬP NHẬT LOGIC KHI BẤM ĐÚNG ***
+            if (speechSynthesis.speaking) speechSynthesis.cancel();
+            wordEl.classList.add('correct', 'disabled');
+            const sentenceWords = elements.sentence.textContent.split(' ');
+            sentenceWords[state.currentWordIndex] = clickedWord;
+            elements.sentence.textContent = sentenceWords.join(' ');
+            state.currentWordIndex++;
+            elements.message.textContent = '';
+
+            if (state.currentWordIndex === state.words.length) {
+                // Hoàn thành câu
+                state.score += 10;
+                state.completedSentences++;
+                updateScoreDisplay();
+                elements.sentence.textContent = state.originalSentence;
+                speak(state.originalSentence, () => setTimeout(startNewSentence, 1800));
+            } else {
+                // Đọc ngay từ tiếp theo để gợi ý
+                speak(state.words[state.currentWordIndex]);
+            }
+        } else {
+            // *** CẬP NHẬT LOGIC KHI BẤM SAI ***
+            wordEl.classList.add('incorrect');
+            elements.message.textContent = 'Sai rồi! Nghe lại nhé.';
+            
+            const correctWordEl = Array.from(elements.wordBank.children).find(el => 
+                !el.classList.contains('disabled') && el.textContent === correctWord
+            );
+            if(correctWordEl) correctWordEl.classList.add('blink');
+            
+            // Đọc lại từ đúng để người chơi chọn lại
+            speak(correctWord);
+
+            setTimeout(() => {
+                wordEl.classList.remove('incorrect');
+                if(correctWordEl) correctWordEl.classList.remove('blink');
+                elements.message.textContent = '';
+            }, 1500);
+        }
+    }
+
+    function showCongratulations() {
+        elements.gameScreen.style.display = 'none';
+        elements.congratsScreen.style.display = 'flex';
+        startFireworks();
+    }
+
+    function resetGame() {
+        if (speechSynthesis.speaking) speechSynthesis.cancel();
+        initializeState();
+        updateScoreDisplay();
+        elements.congratsScreen.style.display = 'none';
+        elements.gameScreen.style.display = 'block';
+        elements.startScreen.style.display = 'none';
+        stopFireworks();
+        startNewSentence();
+    }
+    
+    const ctx = elements.canvas.getContext('2d');
+    let particles = [];
+    
+    function startFireworks() {
+        particles = [];
+        for (let i = 0; i < 100; i++) particles.push(createParticle());
+        animateFireworks();
+    }
+
+    function createParticle() {
+        const x = elements.canvas.width / 2, y = elements.canvas.height / 2;
+        const angle = Math.random() * Math.PI * 2, speed = Math.random() * 6 + 2;
+        return {
+            x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+            color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+            size: Math.random() * 4 + 2, life: 1, fade: 0.02
+        };
+    }
+
+    function animateFireworks() {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+        ctx.globalCompositeOperation = 'lighter';
+        
+        particles = particles.filter(p => p.life > 0);
+        if (particles.length === 0 && state.animationFrameId) { stopFireworks(); return; }
+
+        particles.forEach(p => {
+            p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.life -= p.fade;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${p.color.match(/\d+/)[0]}, 100%, 70%, ${p.life})`;
+            ctx.fill();
+        });
+        
+        state.animationFrameId = requestAnimationFrame(animateFireworks);
+    }
+    
+    function stopFireworks() {
+        if (state.animationFrameId) cancelAnimationFrame(state.animationFrameId);
+        state.animationFrameId = null;
+        particles = [];
+        ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+    }
+
+    elements.startBtn.addEventListener('click', () => {
+        elements.startScreen.style.display = 'none';
+        elements.gameScreen.style.display = 'block';
+        resetGame();
+    });
+
+    elements.listenAgainBtn.addEventListener('click', () => {
+        if (state.words.length > 0 && state.currentWordIndex < state.words.length) {
+            speak(state.words[state.currentWordIndex]);
+        }
+    });
+
+    elements.resetBtn.addEventListener('click', resetGame);
+    elements.playAgainBtn.addEventListener('click', resetGame);
+    window.addEventListener('resize', () => {
+        elements.canvas.width = window.innerWidth;
+        elements.canvas.height = window.innerHeight;
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        elements.canvas.width = window.innerWidth;
+        elements.canvas.height = window.innerHeight;
+        initializeState();
+        initializeSpeech();
+        updateScoreDisplay();
+    });
+
+    </script>
+</body>
+</html>
